@@ -1,0 +1,349 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 800px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "id": "Mar\u00eda P\u00e9rez", "label": "Mar\u00eda P\u00e9rez", "shape": "dot", "title": "Nombre: Mar\u00eda P\u00e9rez\u003cbr\u003eDirecci\u00f3n: Calle wzal, N\u00famero 70, Colonia kucf, Ciudad de M\u00e9xico\u003cbr\u003eTel\u00e9fono: 1895308930\u003cbr\u003eFecha de Registro: 10/31/2023"}, {"color": "#97c2fc", "id": "Mar\u00eda Mart\u00ednez", "label": "Mar\u00eda Mart\u00ednez", "shape": "dot", "title": "Nombre: Mar\u00eda Mart\u00ednez\u003cbr\u003eDirecci\u00f3n: Calle gbgu, N\u00famero 916, Colonia njqz, Ciudad de M\u00e9xico\u003cbr\u003eTel\u00e9fono: 2115890333\u003cbr\u003eFecha de Registro: 10/31/2023"}, {"color": "#97c2fc", "id": "Carlos L\u00f3pez", "label": "Carlos L\u00f3pez", "shape": "dot", "title": "Nombre: Carlos L\u00f3pez\u003cbr\u003eDirecci\u00f3n: Calle iobx, N\u00famero 962, Colonia umtb, Ciudad de M\u00e9xico\u003cbr\u003eTel\u00e9fono: 6347421320\u003cbr\u003eFecha de Registro: 10/30/2023"}, {"color": "#97c2fc", "id": "Ana Jim\u00e9nez", "label": "Ana Jim\u00e9nez", "shape": "dot", "title": "Nombre: Ana Jim\u00e9nez\u003cbr\u003eDirecci\u00f3n: Calle kxzj, N\u00famero 127, Colonia feol, Ciudad de M\u00e9xico\u003cbr\u003eTel\u00e9fono: 8004950715\u003cbr\u003eFecha de Registro: 10/30/2023"}, {"color": "#97c2fc", "id": "Francisco Romero", "label": "Francisco Romero", "shape": "dot", "title": "Nombre: Francisco Romero\u003cbr\u003eDirecci\u00f3n: Calle gegh, N\u00famero 697, Colonia oklq, Ciudad de M\u00e9xico\u003cbr\u003eTel\u00e9fono: 7803251956\u003cbr\u003eFecha de Registro: 10/30/2023"}, {"color": "#97c2fc", "id": "David Rodr\u00edguez", "label": "David Rodr\u00edguez", "shape": "dot", "title": "Nombre: David Rodr\u00edguez\u003cbr\u003eDirecci\u00f3n: Calle lzkz, N\u00famero 177, Colonia xjsx, Ciudad de M\u00e9xico\u003cbr\u003eTel\u00e9fono: 5819162546\u003cbr\u003eFecha de Registro: 10/30/2023"}, {"color": "#97c2fc", "id": "Francisco Rodr\u00edguez", "label": "Francisco Rodr\u00edguez", "shape": "dot", "title": "Nombre: Francisco Rodr\u00edguez\u003cbr\u003eDirecci\u00f3n: Calle ecsr, N\u00famero 696, Colonia qoxq, Ciudad de M\u00e9xico\u003cbr\u003eTel\u00e9fono: 6698304901\u003cbr\u003eFecha de Registro: 10/22/2023"}, {"color": "#97c2fc", "id": "David Fern\u00e1ndez", "label": "David Fern\u00e1ndez", "shape": "dot", "title": "Nombre: David Fern\u00e1ndez\u003cbr\u003eDirecci\u00f3n: Calle fnlh, N\u00famero 900, Colonia gjuy, Ciudad de M\u00e9xico\u003cbr\u003eTel\u00e9fono: 7967692193\u003cbr\u003eFecha de Registro: 10/22/2023"}, {"color": "#97c2fc", "id": "Isabel Jim\u00e9nez", "label": "Isabel Jim\u00e9nez", "shape": "dot", "title": "Nombre: Isabel Jim\u00e9nez\u003cbr\u003eDirecci\u00f3n: Calle sjpa, N\u00famero 264, Colonia wzrx, Ciudad de M\u00e9xico\u003cbr\u003eTel\u00e9fono: 1454739871\u003cbr\u003eFecha de Registro: 10/22/2023"}, {"color": "#97c2fc", "id": "Ana L\u00f3pez", "label": "Ana L\u00f3pez", "shape": "dot", "title": "Nombre: Ana L\u00f3pez\u003cbr\u003eDirecci\u00f3n: Calle hzxy, N\u00famero 54, Colonia vfhz, Ciudad de M\u00e9xico\u003cbr\u003eTel\u00e9fono: 2978988074\u003cbr\u003eFecha de Registro: 10/22/2023"}, {"color": "#97c2fc", "id": "Francisco Gonz\u00e1lez", "label": "Francisco Gonz\u00e1lez", "shape": "dot", "title": "Nombre: Francisco Gonz\u00e1lez\u003cbr\u003eDirecci\u00f3n: Calle dyma, N\u00famero 618, Colonia knme, Ciudad de M\u00e9xico\u003cbr\u003eTel\u00e9fono: 2131866761\u003cbr\u003eFecha de Registro: 10/22/2023"}, {"color": "#97c2fc", "id": "Jos\u00e9 Garc\u00eda", "label": "Jos\u00e9 Garc\u00eda", "shape": "dot", "title": "Nombre: Jos\u00e9 Garc\u00eda\u003cbr\u003eDirecci\u00f3n: Calle zoto, N\u00famero 84, Colonia gcvl, Ciudad de M\u00e9xico\u003cbr\u003eTel\u00e9fono: 7565954581\u003cbr\u003eFecha de Registro: 10/22/2023"}, {"color": "#97c2fc", "id": "Isabel Rodr\u00edguez", "label": "Isabel Rodr\u00edguez", "shape": "dot", "title": "Nombre: Isabel Rodr\u00edguez\u003cbr\u003eDirecci\u00f3n: Calle ptzr, N\u00famero 694, Colonia etap, Ciudad de M\u00e9xico\u003cbr\u003eTel\u00e9fono: 2960170895\u003cbr\u003eFecha de Registro: 10/21/2023"}, {"color": "#97c2fc", "id": "Francisco Fern\u00e1ndez", "label": "Francisco Fern\u00e1ndez", "shape": "dot", "title": "Nombre: Francisco Fern\u00e1ndez\u003cbr\u003eDirecci\u00f3n: Calle djru, N\u00famero 861, Colonia dzmd, Ciudad de M\u00e9xico\u003cbr\u003eTel\u00e9fono: 3623154580\u003cbr\u003eFecha de Registro: 10/29/2023"}, {"color": "#97c2fc", "id": "Juan L\u00f3pez", "label": "Juan L\u00f3pez", "shape": "dot", "title": "Nombre: Juan L\u00f3pez\u003cbr\u003eDirecci\u00f3n: Calle rmaw, N\u00famero 944, Colonia ysqg, Ciudad de M\u00e9xico\u003cbr\u003eTel\u00e9fono: 2173702567\u003cbr\u003eFecha de Registro: 10/29/2023"}, {"color": "#97c2fc", "id": "Luis Garc\u00eda", "label": "Luis Garc\u00eda", "shape": "dot", "title": "Nombre: Luis Garc\u00eda\u003cbr\u003eDirecci\u00f3n: Calle rkbx, N\u00famero 420, Colonia utci, Ciudad de M\u00e9xico\u003cbr\u003eTel\u00e9fono: 1818263444\u003cbr\u003eFecha de Registro: 10/21/2023"}, {"color": "#97c2fc", "id": "Luis Romero", "label": "Luis Romero", "shape": "dot", "title": "Nombre: Luis Romero\u003cbr\u003eDirecci\u00f3n: Calle cjit, N\u00famero 158, Colonia mmte, Ciudad de M\u00e9xico\u003cbr\u003eTel\u00e9fono: 8415343220\u003cbr\u003eFecha de Registro: 10/21/2023"}, {"color": "#97c2fc", "id": "Luis Gonz\u00e1lez", "label": "Luis Gonz\u00e1lez", "shape": "dot", "title": "Nombre: Luis Gonz\u00e1lez\u003cbr\u003eDirecci\u00f3n: Calle tbvc, N\u00famero 233, Colonia xjzq, Ciudad de M\u00e9xico\u003cbr\u003eTel\u00e9fono: 1201436686\u003cbr\u003eFecha de Registro: 10/21/2023"}, {"color": "#97c2fc", "id": "Ana Fern\u00e1ndez", "label": "Ana Fern\u00e1ndez", "shape": "dot", "title": "Nombre: Ana Fern\u00e1ndez\u003cbr\u003eDirecci\u00f3n: Calle qyry, N\u00famero 44, Colonia rmtb, Ciudad de M\u00e9xico\u003cbr\u003eTel\u00e9fono: 7233907746\u003cbr\u003eFecha de Registro: 10/29/2023"}, {"color": "#97c2fc", "id": "Francisco Mart\u00ednez", "label": "Francisco Mart\u00ednez", "shape": "dot", "title": "Nombre: Francisco Mart\u00ednez\u003cbr\u003eDirecci\u00f3n: Calle vzxz, N\u00famero 93, Colonia sgdd, Ciudad de M\u00e9xico\u003cbr\u003eTel\u00e9fono: 9318415732\u003cbr\u003eFecha de Registro: 10/29/2023"}, {"color": "#97c2fc", "id": "Francisco Jim\u00e9nez", "label": "Francisco Jim\u00e9nez", "shape": "dot", "title": "Nombre: Francisco Jim\u00e9nez\u003cbr\u003eDirecci\u00f3n: Calle kukr, N\u00famero 842, Colonia khob, Ciudad de M\u00e9xico\u003cbr\u003eTel\u00e9fono: 3605179421\u003cbr\u003eFecha de Registro: 10/29/2023"}, {"color": "#97c2fc", "id": "Juan Jim\u00e9nez", "label": "Juan Jim\u00e9nez", "shape": "dot", "title": "Nombre: Juan Jim\u00e9nez\u003cbr\u003eDirecci\u00f3n: Calle acqf, N\u00famero 655, Colonia qlfj, Ciudad de M\u00e9xico\u003cbr\u003eTel\u00e9fono: 5972025344\u003cbr\u003eFecha de Registro: 10/24/2023"}, {"color": "#97c2fc", "id": "Juan Garc\u00eda", "label": "Juan Garc\u00eda", "shape": "dot", "title": "Nombre: Juan Garc\u00eda\u003cbr\u003eDirecci\u00f3n: Calle zmvo, N\u00famero 537, Colonia mwoi, Ciudad de M\u00e9xico\u003cbr\u003eTel\u00e9fono: 2114167379\u003cbr\u003eFecha de Registro: 10/24/2023"}, {"color": "#97c2fc", "id": "Pedro S\u00e1nchez", "label": "Pedro S\u00e1nchez", "shape": "dot", "title": "Nombre: Pedro S\u00e1nchez\u003cbr\u003eDirecci\u00f3n: Calle kqus, N\u00famero 168, Colonia asct, Ciudad de M\u00e9xico\u003cbr\u003eTel\u00e9fono: 2977446982\u003cbr\u003eFecha de Registro: 10/24/2023"}, {"color": "#97c2fc", "id": "David Garc\u00eda", "label": "David Garc\u00eda", "shape": "dot", "title": "Nombre: David Garc\u00eda\u003cbr\u003eDirecci\u00f3n: Calle vxhs, N\u00famero 544, Colonia sktb, Ciudad de M\u00e9xico\u003cbr\u003eTel\u00e9fono: 3971495041\u003cbr\u003eFecha de Registro: 10/24/2023"}, {"color": "#97c2fc", "id": "Luis Rodr\u00edguez", "label": "Luis Rodr\u00edguez", "shape": "dot", "title": "Nombre: Luis Rodr\u00edguez\u003cbr\u003eDirecci\u00f3n: Calle ryqf, N\u00famero 657, Colonia kujp, Ciudad de M\u00e9xico\u003cbr\u003eTel\u00e9fono: 7323979694\u003cbr\u003eFecha de Registro: 10/24/2023"}, {"color": "#97c2fc", "id": "Pedro Fern\u00e1ndez", "label": "Pedro Fern\u00e1ndez", "shape": "dot", "title": "Nombre: Pedro Fern\u00e1ndez\u003cbr\u003eDirecci\u00f3n: Calle ezzj, N\u00famero 469, Colonia fnxx, Ciudad de M\u00e9xico\u003cbr\u003eTel\u00e9fono: 3374072377\u003cbr\u003eFecha de Registro: 10/24/2023"}, {"color": "#97c2fc", "id": "Luis Jim\u00e9nez", "label": "Luis Jim\u00e9nez", "shape": "dot", "title": "Nombre: Luis Jim\u00e9nez\u003cbr\u003eDirecci\u00f3n: Calle wopn, N\u00famero 518, Colonia tbim, Ciudad de M\u00e9xico\u003cbr\u003eTel\u00e9fono: 6934935315\u003cbr\u003eFecha de Registro: 10/28/2023"}, {"color": "#97c2fc", "id": "David Gonz\u00e1lez", "label": "David Gonz\u00e1lez", "shape": "dot", "title": "Nombre: David Gonz\u00e1lez\u003cbr\u003eDirecci\u00f3n: Calle lmon, N\u00famero 943, Colonia sowh, Ciudad de M\u00e9xico\u003cbr\u003eTel\u00e9fono: 2345417996\u003cbr\u003eFecha de Registro: 10/28/2023"}, {"color": "#97c2fc", "id": "Pedro Garc\u00eda", "label": "Pedro Garc\u00eda", "shape": "dot", "title": "Nombre: Pedro Garc\u00eda\u003cbr\u003eDirecci\u00f3n: Calle nneu, N\u00famero 546, Colonia lfra, Ciudad de M\u00e9xico\u003cbr\u003eTel\u00e9fono: 6608905324\u003cbr\u003eFecha de Registro: 10/28/2023"}, {"color": "#97c2fc", "id": "Ana Mart\u00ednez", "label": "Ana Mart\u00ednez", "shape": "dot", "title": "Nombre: Ana Mart\u00ednez\u003cbr\u003eDirecci\u00f3n: Calle ickp, N\u00famero 373, Colonia enin, Ciudad de M\u00e9xico\u003cbr\u003eTel\u00e9fono: 9338054741\u003cbr\u003eFecha de Registro: 10/28/2023"}, {"color": "#97c2fc", "id": "Carlos Rodr\u00edguez", "label": "Carlos Rodr\u00edguez", "shape": "dot", "title": "Nombre: Carlos Rodr\u00edguez\u003cbr\u003eDirecci\u00f3n: Calle ovnb, N\u00famero 65, Colonia pgsc, Ciudad de M\u00e9xico\u003cbr\u003eTel\u00e9fono: 3250699355\u003cbr\u003eFecha de Registro: 10/28/2023"}, {"color": "#97c2fc", "id": "Pedro L\u00f3pez", "label": "Pedro L\u00f3pez", "shape": "dot", "title": "Nombre: Pedro L\u00f3pez\u003cbr\u003eDirecci\u00f3n: Calle hcrl, N\u00famero 460, Colonia tibx, Ciudad de M\u00e9xico\u003cbr\u003eTel\u00e9fono: 798210044\u003cbr\u003eFecha de Registro: 10/28/2023"}]);
+                  edges = new vis.DataSet([{"from": "Mar\u00eda P\u00e9rez", "to": "Mar\u00eda Mart\u00ednez"}, {"from": "Carlos L\u00f3pez", "to": "Ana Jim\u00e9nez"}, {"from": "Carlos L\u00f3pez", "to": "Francisco Romero"}, {"from": "Carlos L\u00f3pez", "to": "David Rodr\u00edguez"}, {"from": "Carlos L\u00f3pez", "to": "Francisco Rodr\u00edguez"}, {"from": "Carlos L\u00f3pez", "to": "David Fern\u00e1ndez"}, {"from": "Carlos L\u00f3pez", "to": "Isabel Jim\u00e9nez"}, {"from": "Carlos L\u00f3pez", "to": "Ana L\u00f3pez"}, {"from": "Carlos L\u00f3pez", "to": "Francisco Gonz\u00e1lez"}, {"from": "Carlos L\u00f3pez", "to": "Jos\u00e9 Garc\u00eda"}, {"from": "Ana Jim\u00e9nez", "to": "Francisco Romero"}, {"from": "Ana Jim\u00e9nez", "to": "David Rodr\u00edguez"}, {"from": "Ana Jim\u00e9nez", "to": "Francisco Rodr\u00edguez"}, {"from": "Ana Jim\u00e9nez", "to": "David Fern\u00e1ndez"}, {"from": "Ana Jim\u00e9nez", "to": "Ana Jim\u00e9nez"}, {"from": "Ana Jim\u00e9nez", "to": "Isabel Jim\u00e9nez"}, {"from": "Ana Jim\u00e9nez", "to": "Ana L\u00f3pez"}, {"from": "Ana Jim\u00e9nez", "to": "Francisco Gonz\u00e1lez"}, {"from": "Ana Jim\u00e9nez", "to": "Jos\u00e9 Garc\u00eda"}, {"from": "Francisco Romero", "to": "David Rodr\u00edguez"}, {"from": "Francisco Romero", "to": "Francisco Rodr\u00edguez"}, {"from": "Francisco Romero", "to": "David Fern\u00e1ndez"}, {"from": "Francisco Romero", "to": "Isabel Jim\u00e9nez"}, {"from": "Francisco Romero", "to": "Ana L\u00f3pez"}, {"from": "Francisco Romero", "to": "Francisco Gonz\u00e1lez"}, {"from": "Francisco Romero", "to": "Jos\u00e9 Garc\u00eda"}, {"from": "David Rodr\u00edguez", "to": "Francisco Rodr\u00edguez"}, {"from": "David Rodr\u00edguez", "to": "David Fern\u00e1ndez"}, {"from": "David Rodr\u00edguez", "to": "Isabel Jim\u00e9nez"}, {"from": "David Rodr\u00edguez", "to": "Ana L\u00f3pez"}, {"from": "David Rodr\u00edguez", "to": "Francisco Gonz\u00e1lez"}, {"from": "David Rodr\u00edguez", "to": "Jos\u00e9 Garc\u00eda"}, {"from": "Francisco Rodr\u00edguez", "to": "David Fern\u00e1ndez"}, {"from": "Francisco Rodr\u00edguez", "to": "Isabel Jim\u00e9nez"}, {"from": "Francisco Rodr\u00edguez", "to": "Ana L\u00f3pez"}, {"from": "Francisco Rodr\u00edguez", "to": "Francisco Gonz\u00e1lez"}, {"from": "Francisco Rodr\u00edguez", "to": "Jos\u00e9 Garc\u00eda"}, {"from": "David Fern\u00e1ndez", "to": "Isabel Jim\u00e9nez"}, {"from": "David Fern\u00e1ndez", "to": "Ana L\u00f3pez"}, {"from": "David Fern\u00e1ndez", "to": "Francisco Gonz\u00e1lez"}, {"from": "David Fern\u00e1ndez", "to": "Jos\u00e9 Garc\u00eda"}, {"from": "Isabel Jim\u00e9nez", "to": "Ana L\u00f3pez"}, {"from": "Isabel Jim\u00e9nez", "to": "Francisco Gonz\u00e1lez"}, {"from": "Isabel Jim\u00e9nez", "to": "Jos\u00e9 Garc\u00eda"}, {"from": "Ana L\u00f3pez", "to": "Francisco Gonz\u00e1lez"}, {"from": "Ana L\u00f3pez", "to": "Jos\u00e9 Garc\u00eda"}, {"from": "Francisco Gonz\u00e1lez", "to": "Jos\u00e9 Garc\u00eda"}, {"from": "Isabel Rodr\u00edguez", "to": "Francisco Fern\u00e1ndez"}, {"from": "Isabel Rodr\u00edguez", "to": "Juan L\u00f3pez"}, {"from": "Isabel Rodr\u00edguez", "to": "Luis Garc\u00eda"}, {"from": "Isabel Rodr\u00edguez", "to": "Luis Romero"}, {"from": "Isabel Rodr\u00edguez", "to": "Luis Gonz\u00e1lez"}, {"from": "Isabel Rodr\u00edguez", "to": "Ana Fern\u00e1ndez"}, {"from": "Isabel Rodr\u00edguez", "to": "Francisco Mart\u00ednez"}, {"from": "Isabel Rodr\u00edguez", "to": "Francisco Jim\u00e9nez"}, {"from": "Francisco Fern\u00e1ndez", "to": "Juan L\u00f3pez"}, {"from": "Francisco Fern\u00e1ndez", "to": "Luis Garc\u00eda"}, {"from": "Francisco Fern\u00e1ndez", "to": "Luis Romero"}, {"from": "Francisco Fern\u00e1ndez", "to": "Luis Gonz\u00e1lez"}, {"from": "Francisco Fern\u00e1ndez", "to": "Ana Fern\u00e1ndez"}, {"from": "Francisco Fern\u00e1ndez", "to": "Francisco Mart\u00ednez"}, {"from": "Francisco Fern\u00e1ndez", "to": "Francisco Jim\u00e9nez"}, {"from": "Juan L\u00f3pez", "to": "Luis Garc\u00eda"}, {"from": "Juan L\u00f3pez", "to": "Luis Romero"}, {"from": "Juan L\u00f3pez", "to": "Luis Gonz\u00e1lez"}, {"from": "Juan L\u00f3pez", "to": "Ana Fern\u00e1ndez"}, {"from": "Juan L\u00f3pez", "to": "Francisco Mart\u00ednez"}, {"from": "Juan L\u00f3pez", "to": "Francisco Jim\u00e9nez"}, {"from": "Luis Garc\u00eda", "to": "Luis Romero"}, {"from": "Luis Garc\u00eda", "to": "Luis Gonz\u00e1lez"}, {"from": "Luis Garc\u00eda", "to": "Ana Fern\u00e1ndez"}, {"from": "Luis Garc\u00eda", "to": "Francisco Mart\u00ednez"}, {"from": "Luis Garc\u00eda", "to": "Francisco Jim\u00e9nez"}, {"from": "Luis Romero", "to": "Luis Gonz\u00e1lez"}, {"from": "Luis Romero", "to": "Ana Fern\u00e1ndez"}, {"from": "Luis Romero", "to": "Francisco Mart\u00ednez"}, {"from": "Luis Romero", "to": "Francisco Jim\u00e9nez"}, {"from": "Luis Gonz\u00e1lez", "to": "Ana Fern\u00e1ndez"}, {"from": "Luis Gonz\u00e1lez", "to": "Francisco Mart\u00ednez"}, {"from": "Luis Gonz\u00e1lez", "to": "Francisco Jim\u00e9nez"}, {"from": "Ana Fern\u00e1ndez", "to": "Francisco Mart\u00ednez"}, {"from": "Ana Fern\u00e1ndez", "to": "Francisco Jim\u00e9nez"}, {"from": "Francisco Mart\u00ednez", "to": "Francisco Jim\u00e9nez"}, {"from": "Juan Jim\u00e9nez", "to": "Juan Garc\u00eda"}, {"from": "Juan Jim\u00e9nez", "to": "Pedro S\u00e1nchez"}, {"from": "Juan Jim\u00e9nez", "to": "David Garc\u00eda"}, {"from": "Juan Jim\u00e9nez", "to": "Luis Rodr\u00edguez"}, {"from": "Juan Jim\u00e9nez", "to": "Pedro Fern\u00e1ndez"}, {"from": "Juan Jim\u00e9nez", "to": "Francisco Jim\u00e9nez"}, {"from": "Juan Jim\u00e9nez", "to": "Francisco Gonz\u00e1lez"}, {"from": "Juan Jim\u00e9nez", "to": "Luis Jim\u00e9nez"}, {"from": "Juan Jim\u00e9nez", "to": "David Gonz\u00e1lez"}, {"from": "Juan Jim\u00e9nez", "to": "Pedro Garc\u00eda"}, {"from": "Juan Jim\u00e9nez", "to": "Ana Mart\u00ednez"}, {"from": "Juan Jim\u00e9nez", "to": "Carlos Rodr\u00edguez"}, {"from": "Juan Jim\u00e9nez", "to": "Pedro L\u00f3pez"}, {"from": "Juan Garc\u00eda", "to": "Pedro S\u00e1nchez"}, {"from": "Juan Garc\u00eda", "to": "David Garc\u00eda"}, {"from": "Juan Garc\u00eda", "to": "Luis Rodr\u00edguez"}, {"from": "Juan Garc\u00eda", "to": "Pedro Fern\u00e1ndez"}, {"from": "Juan Garc\u00eda", "to": "Francisco Jim\u00e9nez"}, {"from": "Juan Garc\u00eda", "to": "Francisco Gonz\u00e1lez"}, {"from": "Juan Garc\u00eda", "to": "Luis Jim\u00e9nez"}, {"from": "Juan Garc\u00eda", "to": "David Gonz\u00e1lez"}, {"from": "Juan Garc\u00eda", "to": "Pedro Garc\u00eda"}, {"from": "Juan Garc\u00eda", "to": "Ana Mart\u00ednez"}, {"from": "Juan Garc\u00eda", "to": "Carlos Rodr\u00edguez"}, {"from": "Juan Garc\u00eda", "to": "Pedro L\u00f3pez"}, {"from": "Pedro S\u00e1nchez", "to": "David Garc\u00eda"}, {"from": "Pedro S\u00e1nchez", "to": "Luis Rodr\u00edguez"}, {"from": "Pedro S\u00e1nchez", "to": "Pedro Fern\u00e1ndez"}, {"from": "Pedro S\u00e1nchez", "to": "Francisco Jim\u00e9nez"}, {"from": "Pedro S\u00e1nchez", "to": "Francisco Gonz\u00e1lez"}, {"from": "Pedro S\u00e1nchez", "to": "Luis Jim\u00e9nez"}, {"from": "Pedro S\u00e1nchez", "to": "David Gonz\u00e1lez"}, {"from": "Pedro S\u00e1nchez", "to": "Pedro Garc\u00eda"}, {"from": "Pedro S\u00e1nchez", "to": "Ana Mart\u00ednez"}, {"from": "Pedro S\u00e1nchez", "to": "Carlos Rodr\u00edguez"}, {"from": "Pedro S\u00e1nchez", "to": "Pedro L\u00f3pez"}, {"from": "David Garc\u00eda", "to": "Luis Rodr\u00edguez"}, {"from": "David Garc\u00eda", "to": "Pedro Fern\u00e1ndez"}, {"from": "David Garc\u00eda", "to": "Francisco Jim\u00e9nez"}, {"from": "David Garc\u00eda", "to": "Francisco Gonz\u00e1lez"}, {"from": "David Garc\u00eda", "to": "Luis Jim\u00e9nez"}, {"from": "David Garc\u00eda", "to": "David Gonz\u00e1lez"}, {"from": "David Garc\u00eda", "to": "Pedro Garc\u00eda"}, {"from": "David Garc\u00eda", "to": "Ana Mart\u00ednez"}, {"from": "David Garc\u00eda", "to": "Carlos Rodr\u00edguez"}, {"from": "David Garc\u00eda", "to": "Pedro L\u00f3pez"}, {"from": "Luis Rodr\u00edguez", "to": "Pedro Fern\u00e1ndez"}, {"from": "Luis Rodr\u00edguez", "to": "Francisco Jim\u00e9nez"}, {"from": "Luis Rodr\u00edguez", "to": "Francisco Gonz\u00e1lez"}, {"from": "Luis Rodr\u00edguez", "to": "Luis Jim\u00e9nez"}, {"from": "Luis Rodr\u00edguez", "to": "David Gonz\u00e1lez"}, {"from": "Luis Rodr\u00edguez", "to": "Pedro Garc\u00eda"}, {"from": "Luis Rodr\u00edguez", "to": "Ana Mart\u00ednez"}, {"from": "Luis Rodr\u00edguez", "to": "Carlos Rodr\u00edguez"}, {"from": "Luis Rodr\u00edguez", "to": "Pedro L\u00f3pez"}, {"from": "Pedro Fern\u00e1ndez", "to": "Francisco Jim\u00e9nez"}, {"from": "Pedro Fern\u00e1ndez", "to": "Francisco Gonz\u00e1lez"}, {"from": "Pedro Fern\u00e1ndez", "to": "Luis Jim\u00e9nez"}, {"from": "Pedro Fern\u00e1ndez", "to": "David Gonz\u00e1lez"}, {"from": "Pedro Fern\u00e1ndez", "to": "Pedro Garc\u00eda"}, {"from": "Pedro Fern\u00e1ndez", "to": "Ana Mart\u00ednez"}, {"from": "Pedro Fern\u00e1ndez", "to": "Carlos Rodr\u00edguez"}, {"from": "Pedro Fern\u00e1ndez", "to": "Pedro L\u00f3pez"}, {"from": "Francisco Jim\u00e9nez", "to": "Francisco Gonz\u00e1lez"}, {"from": "Francisco Jim\u00e9nez", "to": "Luis Jim\u00e9nez"}, {"from": "Francisco Jim\u00e9nez", "to": "David Gonz\u00e1lez"}, {"from": "Francisco Jim\u00e9nez", "to": "Pedro Garc\u00eda"}, {"from": "Francisco Jim\u00e9nez", "to": "Ana Mart\u00ednez"}, {"from": "Francisco Jim\u00e9nez", "to": "Carlos Rodr\u00edguez"}, {"from": "Francisco Jim\u00e9nez", "to": "Pedro L\u00f3pez"}, {"from": "Francisco Gonz\u00e1lez", "to": "Luis Jim\u00e9nez"}, {"from": "Francisco Gonz\u00e1lez", "to": "David Gonz\u00e1lez"}, {"from": "Francisco Gonz\u00e1lez", "to": "Pedro Garc\u00eda"}, {"from": "Francisco Gonz\u00e1lez", "to": "Ana Mart\u00ednez"}, {"from": "Francisco Gonz\u00e1lez", "to": "Carlos Rodr\u00edguez"}, {"from": "Francisco Gonz\u00e1lez", "to": "Pedro L\u00f3pez"}, {"from": "Luis Jim\u00e9nez", "to": "David Gonz\u00e1lez"}, {"from": "Luis Jim\u00e9nez", "to": "Pedro Garc\u00eda"}, {"from": "Luis Jim\u00e9nez", "to": "Ana Mart\u00ednez"}, {"from": "Luis Jim\u00e9nez", "to": "Carlos Rodr\u00edguez"}, {"from": "Luis Jim\u00e9nez", "to": "Pedro L\u00f3pez"}, {"from": "David Gonz\u00e1lez", "to": "Pedro Garc\u00eda"}, {"from": "David Gonz\u00e1lez", "to": "Ana Mart\u00ednez"}, {"from": "David Gonz\u00e1lez", "to": "Carlos Rodr\u00edguez"}, {"from": "David Gonz\u00e1lez", "to": "Pedro L\u00f3pez"}, {"from": "Pedro Garc\u00eda", "to": "Ana Mart\u00ednez"}, {"from": "Pedro Garc\u00eda", "to": "Carlos Rodr\u00edguez"}, {"from": "Pedro Garc\u00eda", "to": "Pedro L\u00f3pez"}, {"from": "Ana Mart\u00ednez", "to": "Carlos Rodr\u00edguez"}, {"from": "Ana Mart\u00ednez", "to": "Pedro L\u00f3pez"}, {"from": "Carlos Rodr\u00edguez", "to": "Pedro L\u00f3pez"}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
